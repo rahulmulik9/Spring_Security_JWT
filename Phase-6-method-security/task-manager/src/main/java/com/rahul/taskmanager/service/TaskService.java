@@ -8,6 +8,7 @@ import com.rahul.taskmanager.exception.TaskNotFoundException;
 import com.rahul.taskmanager.repository.TaskRepository;
 import com.rahul.taskmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class TaskService {
         return toResponse(saved);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public List<TaskResponse> getAllTasks() {
         return taskRepository.findAll()
                 .stream()

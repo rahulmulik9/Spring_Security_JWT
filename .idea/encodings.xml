@@ -5,6 +5,7 @@
     <file url="file://$PROJECT_DIR$/Phase-2-default-security/task-manager/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase-3-inmemory-basic-auth/task-manager/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase-4-role-based-authz/task-manager/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase-6-method-security/task-manager/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/phase-5-db-users/task-manager/src/main/java" charset="UTF-8" />
   </component>
 </project>
