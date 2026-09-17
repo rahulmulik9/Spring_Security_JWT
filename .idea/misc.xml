@@ -5,7 +5,7 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/task-manager/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase-3-inmemory-basic-auth/task-manager/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase-4-role-based-authz/task-manager/pom.xml" />
       </list>
     </option>
   </component>
