@@ -2,10 +2,14 @@ package com.rahul.taskmanager.service;
 
 import com.rahul.taskmanager.dto.TaskRequest;
 import com.rahul.taskmanager.dto.TaskResponse;
-import com.rahul.taskmanager.exception.TaskNotFoundException;
 import com.rahul.taskmanager.entity.Task;
+import com.rahul.taskmanager.entity.User;
+import com.rahul.taskmanager.exception.TaskNotFoundException;
 import com.rahul.taskmanager.repository.TaskRepository;
+import com.rahul.taskmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,12 +19,16 @@ import java.util.List;
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
 
     public TaskResponse createTask(TaskRequest request) {
+        User currentUser = getCurrentUser();
+
         Task task = Task.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .completed(request.isCompleted())
+                .owner(currentUser)
                 .build();
         Task saved = taskRepository.save(task);
         return toResponse(saved);
@@ -56,6 +64,13 @@ public class TaskService {
             throw new TaskNotFoundException("Task not found with id: " + id);
         }
         taskRepository.deleteById(id);
+    }
+
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found in DB: " + username));
     }
 
     private TaskResponse toResponse(Task task) {
