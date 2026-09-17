@@ -32,7 +32,7 @@ public class SecurityFilterConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/tasks/public", "/auth/register", "/auth/login").permitAll()
+                        .requestMatchers("/tasks/public", "/auth/register", "/auth/login", "/auth/refresh").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
