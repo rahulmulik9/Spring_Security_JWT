@@ -16,26 +16,26 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-        var alice = User.builder()
-                .username("Ajay")
-                .password(passwordEncoder.encode("password123"))
-                .roles("USER")
-                .build();
-
-        var bob = User.builder()
-                .username("Amit")
-                .password(passwordEncoder.encode("password123"))
-                .roles("USER")
-                .build();
-
-        var admin = User.builder()
-                .username("Rahul")
-                .password(passwordEncoder.encode("admin123"))
-                .roles("ADMIN")
-                .build();
-
-        return new InMemoryUserDetailsManager(alice, bob, admin);
-    }
+//    @Bean
+//    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+//        var alice = User.builder()
+//                .username("Ajay")
+//                .password(passwordEncoder.encode("password123"))
+//                .roles("USER")
+//                .build();
+//
+//        var bob = User.builder()
+//                .username("Amit")
+//                .password(passwordEncoder.encode("password123"))
+//                .roles("USER")
+//                .build();
+//
+//        var admin = User.builder()
+//                .username("Rahul")
+//                .password(passwordEncoder.encode("admin123"))
+//                .roles("ADMIN")
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(alice, bob, admin);
+//    }
 }
