@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "Task Manager - Phase 9 (JWT Authentication)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "taskId", "value": "1" },
+    { "key": "newUsername", "value": "Priya" },
+    { "key": "newPassword", "value": "mypassword456" },
+    { "key": "priyaTaskId", "value": "7" },
+    { "key": "ajayToken", "value": "" },
+    { "key": "rahulToken", "value": "" },
+    { "key": "priyaToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{ajayToken}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Auth",
+      "item": [
+        {
+          "name": "Register New User (Priya, no auth, expect 201)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"{{newPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Register Duplicate Username (expect 500 - known gap)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"anything\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login as Ajay (USER) - saves ajayToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('ajayToken', json.token);",
+                  "    console.log('ajayToken saved');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"Ajay\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login as Rahul (ADMIN) - saves rahulToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('rahulToken', json.token);",
+                  "    console.log('rahulToken saved');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"Rahul\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login as Priya (USER, after registering) - saves priyaToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('priyaToken', json.token);",
+                  "    console.log('priyaToken saved');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"{{newPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Wrong Password (expect 500 - known gap)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"Ajay\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Public",
+      "item": [
+        {
+          "name": "Get Public Endpoint (no auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/tasks/public", "host": ["{{baseUrl}}"], "path": ["tasks", "public"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Task CRUD (Ajay via JWT)",
+      "item": [
+        {
+          "name": "Create Task (Ajay)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Buy groceries\",\n  \"description\": \"Milk, eggs, bread\",\n  \"completed\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
+          }
+        },
+        {
+          "name": "Get Task By Id (Ajay)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Update Task (Ajay)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Buy groceries\",\n  \"description\": \"Milk, eggs, bread, butter\",\n  \"completed\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Delete Task (Ajay)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Priya Creates Own Task (expect 201)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [ { "key": "token", "value": "{{priyaToken}}", "type": "string" } ]
+            },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Priya's first task\",\n  \"description\": \"Created right after registering\",\n  \"completed\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Admin Access (401 vs 403 vs 200)",
+      "item": [
+        {
+          "name": "Admin Route as Rahul (ADMIN, expect 200)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [ { "key": "token", "value": "{{rahulToken}}", "type": "string" } ]
+            },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/tasks", "host": ["{{baseUrl}}"], "path": ["admin", "tasks"] }
+          }
+        },
+        {
+          "name": "Admin Route as Ajay (USER, expect 403)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/tasks", "host": ["{{baseUrl}}"], "path": ["admin", "tasks"] }
+          }
+        },
+        {
+          "name": "Admin Route no auth (expect 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/tasks", "host": ["{{baseUrl}}"], "path": ["admin", "tasks"] }
+          }
+        },
+        {
+          "name": "Admin Route with tampered token (expect 401)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [ { "key": "token", "value": "{{ajayToken}}TAMPERED", "type": "string" } ]
+            },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/tasks", "host": ["{{baseUrl}}"], "path": ["admin", "tasks"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Ownership Checks (Phase 6, via JWT)",
+      "item": [
+        {
+          "name": "Priya Updates Ajay's Task (expect 403)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [ { "key": "token", "value": "{{priyaToken}}", "type": "string" } ]
+            },
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hacked\",\n  \"description\": \"Should not work\",\n  \"completed\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Ajay Deletes Priya's Task (expect 403)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/tasks/{{priyaTaskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{priyaTaskId}}"] }
+          }
+        },
+        {
+          "name": "Rahul (ADMIN) Updates Ajay's Task (expect 200 - override)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [ { "key": "token", "value": "{{rahulToken}}", "type": "string" } ]
+            },
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated by admin\",\n  \"description\": \"Admin override\",\n  \"completed\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Rahul (ADMIN) Deletes Priya's Task (expect 204 - override)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [ { "key": "token", "value": "{{rahulToken}}", "type": "string" } ]
+            },
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/tasks/{{priyaTaskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{priyaTaskId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
