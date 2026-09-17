@@ -14,11 +14,13 @@ stored in Postgres, added self-registration, and linked every `Task` to the
 - `User` JPA entity → maps to a `users` table (`id`, `username`, `password`, `role`)
 - `UserRepository` with a derived query method `findByUsername(String)`
 
+
+
 **Why:** In-memory users can't persist or scale. This gives us a real table
 to authenticate against and register into.
 
 ```mermaid
-ER Diagram
+erDiagram
     USERS {
         bigint id PK
         varchar username UK
@@ -43,16 +45,43 @@ and our own `users` table.
 **Important distinction:** this class only **fetches** the user. It never
 compares passwords itself — that's Spring Security's `DaoAuthenticationProvider`,
 using the `PasswordEncoder` bean.
-
-````mermaid
+````
 User Login using password and username
 CustomUserDetailsService have method loadUserByUsername which will fetch user details from repo using username.
 User user = userRepository.findByUsername(username)
-
 Then this user will be handover to DaoAuthenticationProvider which compare password
-
 ````
+```mermaid
+sequenceDiagram
+    participant Client as Postman/Client
+    participant Filter as Basic Auth Filter
+    participant AuthMgr as AuthenticationManager
+    participant Provider as DaoAuthenticationProvider
+    participant UDS as CustomUserDetailsService
+    participant Repo as UserRepository
+    participant DB as Postgres (users)
+    participant Enc as PasswordEncoder (BCrypt)
 
+    Client->>Filter: Authorization: Basic base64(username:password)
+    Filter->>AuthMgr: authenticate(username, rawPassword)
+    AuthMgr->>Provider: delegate
+    Provider->>UDS: loadUserByUsername(username)
+    UDS->>Repo: findByUsername(username)
+    Repo->>DB: SELECT * FROM users WHERE username = ?
+    DB-->>Repo: User row (hashed password, role)
+    Repo-->>UDS: Optional<User>
+    UDS-->>Provider: UserDetails (username, hash, ROLE_x)
+    Provider->>Enc: matches(rawPassword, storedHash)
+    Enc-->>Provider: true / false
+    Provider-->>AuthMgr: Authentication (success/fail)
+    AuthMgr-->>Filter: 200 continues / 401 rejected
+```
+
+**Filter chain:** unchanged from Phase 4 — it already just relies on
+"whichever `UserDetailsService` bean exists," so swapping identity sources
+required zero changes to `authorizeHttpRequests` rules.
+
+---
 
 ## Step 3 — Registration endpoint
 
@@ -69,6 +98,29 @@ arbitrary role would let anyone register themselves as `ADMIN`. Role
 elevation has to happen some other way (manual DB edit, or an admin-only
 endpoint later) — never from the client's own registration request.
 
+```mermaid
+sequenceDiagram
+    participant Client as Postman/Client
+    participant Ctrl as AuthController
+    participant Svc as AuthService
+    participant Repo as UserRepository
+    participant Enc as PasswordEncoder
+    participant DB as Postgres (users)
+
+    Client->>Ctrl: POST /auth/register {username, password}
+    Ctrl->>Svc: register(request)
+    Svc->>Repo: findByUsername(username)
+    Repo->>DB: SELECT ...
+    DB-->>Repo: empty (not taken)
+    Svc->>Enc: encode(rawPassword)
+    Enc-->>Svc: bcryptHash
+    Svc->>Repo: save(User(username, bcryptHash, Role.USER))
+    Repo->>DB: INSERT INTO users ...
+    DB-->>Repo: saved row (id assigned)
+    Repo-->>Svc: User
+    Svc-->>Ctrl: RegisterResponse (id, username, role) — no password
+    Ctrl-->>Client: 201 Created
+```
 
 ---
 
@@ -77,10 +129,9 @@ endpoint later) — never from the client's own registration request.
 **What we built:**
 - `Task.owner` — `@ManyToOne(fetch = LAZY)` to `User`, via `owner_id`
   foreign key, `nullable = false`
-- `TaskService.createTask()` now pulls the logged-in username from
-  `SecurityContextHolder`, 
-- Then using this username , find user from repository  and sets
-  `owner` for the task. Owner details no need to send from request
+- `TaskService.createTask()` now pulls the logged-in user from
+  `SecurityContextHolder`, looks up their full `User` entity, and sets
+  `owner` — **never** from client input
 - `data.sql` updated: users inserted first, tasks reference `owner_id` via
   a subquery on username (since IDs regenerate every boot)
 
@@ -90,9 +141,8 @@ meaningless as a security boundary. The server already knows who's
 authenticated — that's the only trustworthy source.
 
 ```mermaid
-ER Diagram
-    USERS ||--o{ TASKS : owns    //one user can have many tasks
-    
+erDiagram
+    USERS ||--o{ TASKS : owns
     USERS {
         bigint id PK
         varchar username UK
@@ -109,6 +159,31 @@ ER Diagram
     }
 ```
 
+```mermaid
+sequenceDiagram
+    participant Client as Postman/Client
+    participant Ctrl as TaskController
+    participant Svc as TaskService
+    participant Ctx as SecurityContextHolder
+    participant Repo as UserRepository
+    participant TRepo as TaskRepository
+    participant DB as Postgres
+
+    Client->>Ctrl: POST /tasks (Basic Auth: Ajay)
+    Ctrl->>Svc: createTask(request)
+    Svc->>Ctx: getAuthentication()
+    Ctx-->>Svc: principal name = "Ajay"
+    Svc->>Repo: findByUsername("Ajay")
+    Repo->>DB: SELECT * FROM users WHERE username='Ajay'
+    DB-->>Repo: User row
+    Repo-->>Svc: User entity (Ajay)
+    Svc->>TRepo: save(Task(..., owner=Ajay))
+    TRepo->>DB: INSERT INTO tasks (..., owner_id)
+    DB-->>TRepo: saved Task
+    TRepo-->>Svc: Task
+    Svc-->>Ctrl: TaskResponse
+    Ctrl-->>Client: 201 Created
+```
 
 ---
 
@@ -116,21 +191,23 @@ ER Diagram
 
 ```mermaid
 flowchart TD
-    A [Client registers] -->|POST : /auth/register|   
-    Check username is present or not 
-    AuthService will hash password and save user into database
-    
-    
-    B [Client logs in via Basic Auth] -->for any request authenticating is required , so for that user must be saved into database and password should be match
-    When user login => CustomUserDetailsService
-        findByUsername
-        PasswordEncoder.matches
-        success| H[Authenticated as User X]
+    A[Client registers] -->|POST /auth/register| B[AuthController => AuthService]
+    B -->|hash password, Role.USER| C[(users table)]
 
-    C -->|POST /tasks  => TaskService.createTask
-    Owner will be get from SecurityContext
-    Get username from SecurityContext=>then find user 
-    save this owner into task
+    D[Client logs in via Basic Auth] -->|any request| E[Basic Auth Filter]
+    E --> F[CustomUserDetailsService]
+    F -->|findByUsername| C
+    F --> G[PasswordEncoder.matches]
+    G -->|success| H[Authenticated as User X]
 
+    H -->|POST /tasks| I[TaskService.createTask]
+    I -->|owner = current user from SecurityContext| J[(tasks table, owner_id FK)]
+
+    H -->|GET /admin/tasks| K{Role check}
+    K -->|ROLE_ADMIN| L[200 OK]
+    K -->|ROLE_USER| M[403 Forbidden]
 ```
+
+---
+
 
