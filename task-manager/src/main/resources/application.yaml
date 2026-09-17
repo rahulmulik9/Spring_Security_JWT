@@ -1,3 +1,14 @@
 spring:
   application:
     name: task-manager
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/taskmanagerdb
+    username: root
+    password: root
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
