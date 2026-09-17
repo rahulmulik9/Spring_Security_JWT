@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Task Manager - Phase 4 (Role-Based Authz)",
+    "name": "Task Manager - Phase 5 (DB-Backed Users)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,6 +11,14 @@
     {
       "key": "taskId",
       "value": "1"
+    },
+    {
+      "key": "newUsername",
+      "value": "Priya"
+    },
+    {
+      "key": "newPassword",
+      "value": "mypassword456"
     }
   ],
   "auth": {
@@ -21,6 +29,87 @@
     ]
   },
   "item": [
+    {
+      "name": "Auth - Register New User (no auth, expect 201)",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"{{newPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Auth - Register Duplicate Username (expect 500 - known gap)",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"anything\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Auth - New User Creates Own Task (Priya, expect 201)",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{newUsername}}", "type": "string" },
+            { "key": "password", "value": "{{newPassword}}", "type": "string" }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Priya's first task\",\n  \"description\": \"Created right after registering\",\n  \"completed\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tasks",
+          "host": ["{{baseUrl}}"],
+          "path": ["tasks"]
+        }
+      }
+    },
+    {
+      "name": "Auth - New User Hits Admin Route (Priya, expect 403)",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{newUsername}}", "type": "string" },
+            { "key": "password", "value": "{{newPassword}}", "type": "string" }
+          ]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/tasks",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "tasks"]
+        }
+      }
+    },
     {
       "name": "Public - Get Public Endpoint (no auth)",
       "request": {
