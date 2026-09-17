@@ -18,7 +18,7 @@ stored in Postgres, added self-registration, and linked every `Task` to the
 to authenticate against and register into.
 
 ```mermaid
-erDiagram
+ER Diagram
     USERS {
         bigint id PK
         varchar username UK
@@ -46,7 +46,7 @@ using the `PasswordEncoder` bean.
 
 ````mermaid
 User Login using password and username
-CustomUserDetailsService  have method  loadUserByUsername which will fetch user details from repo using username.
+CustomUserDetailsService have method loadUserByUsername which will fetch user details from repo using username.
 User user = userRepository.findByUsername(username)
 
 Then this user will be handover to DaoAuthenticationProvider which compare password
@@ -77,9 +77,10 @@ endpoint later) — never from the client's own registration request.
 **What we built:**
 - `Task.owner` — `@ManyToOne(fetch = LAZY)` to `User`, via `owner_id`
   foreign key, `nullable = false`
-- `TaskService.createTask()` now pulls the logged-in user from
-  `SecurityContextHolder`, looks up their full `User` entity, and sets
-  `owner` — **never** from client input
+- `TaskService.createTask()` now pulls the logged-in username from
+  `SecurityContextHolder`, 
+- Then using this username , find user from repository  and sets
+  `owner` for the task. Owner details no need to send from request
 - `data.sql` updated: users inserted first, tasks reference `owner_id` via
   a subquery on username (since IDs regenerate every boot)
 
@@ -89,8 +90,9 @@ meaningless as a security boundary. The server already knows who's
 authenticated — that's the only trustworthy source.
 
 ```mermaid
-UerDiagram
-    USERS ||--o{ TASKS : owns
+ER Diagram
+    USERS ||--o{ TASKS : owns    //one user can have many tasks
+    
     USERS {
         bigint id PK
         varchar username UK
@@ -114,44 +116,21 @@ UerDiagram
 
 ```mermaid
 flowchart TD
-    A[Client registers] -->|POST /auth/register| B[AuthController → AuthService]
-    B -->|hash password, Role.USER| C[(users table)]
+    A [Client registers] -->|POST : /auth/register|   
+    Check username is present or not 
+    AuthService will hash password and save user into database
+    
+    
+    B [Client logs in via Basic Auth] -->for any request authenticating is required , so for that user must be saved into database and password should be match
+    When user login => CustomUserDetailsService
+        findByUsername
+        PasswordEncoder.matches
+        success| H[Authenticated as User X]
 
-    D[Client logs in via Basic Auth] -->|any request| E[Basic Auth Filter]
-    E --> F[CustomUserDetailsService]
-    F -->|findByUsername| C
-    F --> G[PasswordEncoder.matches]
-    G -->|success| H[Authenticated as User X]
+    C -->|POST /tasks  => TaskService.createTask
+    Owner will be get from SecurityContext
+    Get username from SecurityContext=>then find user 
+    save this owner into task
 
-    H -->|POST /tasks| I[TaskService.createTask]
-    I -->|owner = current user from SecurityContext| J[(tasks table, owner_id FK)]
-
-    H -->|GET /admin/tasks| K{Role check}
-    K -->|ROLE_ADMIN| L[200 OK]
-    K -->|ROLE_USER| M[403 Forbidden]
 ```
 
----
-
-## What's still open / deferred to later phases
-
-- **Ownership is stored but not yet enforced** on update/delete — right now
-  any authenticated user can still edit/delete *any* task, regardless of
-  `owner`. That enforcement is exactly what **Phase 6**'s `@PreAuthorize`
-  rules add.
-- Duplicate-username registration currently returns a raw `500` (the
-  `IllegalArgumentException` isn't caught by `GlobalExceptionHandler` yet) —
-  a known gap, deferred alongside **Phase 7**'s broader error-handling work.
-- All 6 seeded tasks are owned by `Ajay` — deliberate, so Phase 6 testing
-  has a clear "these are Ajay's, prove others can't touch them" baseline.
-
----
-
-## Verified test flow (as run in Postman)
-
-1. `POST /auth/register` → new user created, `201`, no password in response
-2. New user logs in immediately via Basic Auth → `200` on `GET /tasks/{id}`
-3. Duplicate username → rejected (currently `500`, known gap)
-4. New user hits `/admin/tasks` → `403` (self-registration can't grant ADMIN)
-5. `POST /tasks` as any user → `owner_id` in DB correctly matches whoever
-   was authenticated, never client-supplied
