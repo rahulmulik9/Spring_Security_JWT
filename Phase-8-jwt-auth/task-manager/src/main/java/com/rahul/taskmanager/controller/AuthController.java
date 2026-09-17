@@ -1,5 +1,7 @@
 package com.rahul.taskmanager.controller;
 
+import com.rahul.taskmanager.dto.LoginRequest;
+import com.rahul.taskmanager.dto.LoginResponse;
 import com.rahul.taskmanager.dto.RegisterRequest;
 import com.rahul.taskmanager.dto.RegisterResponse;
 import com.rahul.taskmanager.service.AuthService;
@@ -22,5 +24,11 @@ public class AuthController {
     public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest request) {
         RegisterResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 }
