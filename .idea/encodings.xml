@@ -3,5 +3,6 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/Phase-1-Base-Application/task-manager/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase-2-default-security/task-manager/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase-3-inmemory-basic-auth/task-manager/src/main/java" charset="UTF-8" />
   </component>
 </project>
