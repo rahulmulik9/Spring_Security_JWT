@@ -12,10 +12,12 @@ public class SecurityFilterConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/tasks/public").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .httpBasic(basic -> {})
-                .csrf((csrf) -> csrf.disable());  //this will enable all other endpoints than get from postman
+                .csrf((csrf) -> csrf.disable());
 
         return http.build();
     }
