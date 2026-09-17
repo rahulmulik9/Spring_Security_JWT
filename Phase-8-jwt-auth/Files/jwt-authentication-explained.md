@@ -53,7 +53,95 @@ then on. A stolen token is only valid until it expires; a stolen password
 is valid forever until manually changed.
 
 ---
+# Why JWT? — In Simple Words
 
+## The old way (Basic Auth)
+
+Every single request had to do all of this, again and again:
+
+```mermaid
+flowchart TD
+subgraph Flow
+    A[Client sends username + password] --> B[Server looks up user in DB]
+    B --> C[Server compares password hash]
+    C --> D[Request allowed]
+    D -. next request .-> A
+end
+subgraph OVERVIEW
+E[Client]-. username as password everytime .-> F[Server]
+end
+  F-.Server Validate each time.-> A
+```
+
+Even if you called `GET /tasks/1` ten times in a row, the server repeated
+the **entire** process ten times:
+1. Read username + password from the request
+2. Query the database for that user
+3. Compare the password hash
+4. Only then allow the request through
+
+That's a lot of repeated work for something that doesn't actually change
+between requests — you're still the same person you were 5 seconds ago.
+
+---
+
+## The new way (JWT)
+
+The heavy work happens **once**, at login. After that, the server just
+checks a signature — no database involved.
+
+```mermaid
+flowchart TD
+    subgraph Once["Happens ONCE — at login"]
+        A1[Client sends username + password] --> A2[Server looks up user in DB]
+        A2 --> A3[Server compares password hash]
+        A3 --> A4[Server creates a signed token]
+        A4 --> A5[Token sent back to client]
+    end
+
+    subgraph Repeated["Happens on EVERY request after that"]
+        B1[Client sends the token] --> B2[Server checks the signature]
+        B2 --> B3[Request allowed => no DB lookup]
+    end
+
+    A5 -.client stores the token.-> B1
+    B1 -.next request, same token.-> B1
+```
+
+---
+
+## Side-by-side comparison
+
+| Step | Basic Auth | JWT |
+|---|---|---|
+| Send username + password | Every request | **Once**, at login only |
+| Look up user in the database | Every request | **Once**, at login only |
+| Compare password hash | Every request | **Once**, at login only |
+| What proves who you are, after login | The password, sent again each time | The token, sent each time instead |
+| How the server checks that proof | Database query + hash comparison | Just checks the token's signature (fast, no database) |
+
+---
+
+## In one sentence
+
+> Instead of sending your username and password and hitting the database
+> on **every single request**, you do that just **once** at login, get a
+> token back, and every request after that just proves you already logged
+> in — by showing the token — without the server ever touching the
+> database again to check it.
+
+---
+
+## Why this matters
+
+- **Faster** — checking a signature is quick math; querying a database
+  every time is slower, especially under heavy traffic.
+- **Less database load** — with many users making many requests, Basic
+  Auth means constant database hits just for identity checks. JWT removes
+  almost all of that.
+- **Smaller risk if something leaks** — a stolen password works forever
+  until manually changed. A stolen token only works until it expires
+  (see Phase 10 — refresh tokens build on this idea further).
 # 2. Initialization Order — What Sets Up First
 
 This is the part that's easy to get backwards when reading the code
@@ -78,7 +166,7 @@ they exist independently. `SecurityFilterChain`'s job isn't to *create*
 the JWT filter, it's to **register an already-existing filter at a
 specific position** in the request-processing pipeline, via:
 
-```java
+```
 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 ```
 
@@ -235,3 +323,6 @@ not just a theoretical claim.
 | Is this URL public, role-restricted, or any-auth? | `authorizeHttpRequests` | Every request, after the filter |
 | Can this specific user touch this specific data? | `@PreAuthorize` + `TaskSecurity.isOwner()` | Only on annotated service methods |
 | Are the original username/password correct? | `AuthenticationManager` + `PasswordEncoder` | Only once, at `/auth/login` |
+
+
+---
