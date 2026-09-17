@@ -1,5 +1,8 @@
 package com.rahul.taskmanager.config;
 
+import com.rahul.taskmanager.security.CustomAccessDeniedHandler;
+import com.rahul.taskmanager.security.CustomAuthenticationEntryPoint;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -8,7 +11,11 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityFilterConfig {
+
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -19,7 +26,11 @@ public class SecurityFilterConfig {
                         .anyRequest().authenticated()
                 )
                 .httpBasic(basic -> {})
-                .csrf((csrf) -> csrf.disable());
+                .csrf((csrf) -> csrf.disable())
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                );
 
         return http.build();
     }
