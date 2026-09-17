@@ -2,6 +2,7 @@ package com.rahul.taskmanager.service;
 
 import com.rahul.taskmanager.dto.TaskRequest;
 import com.rahul.taskmanager.dto.TaskResponse;
+import com.rahul.taskmanager.exception.TaskNotFoundException;
 import com.rahul.taskmanager.entity.Task;
 import com.rahul.taskmanager.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,13 +35,13 @@ public class TaskService {
 
     public TaskResponse getTaskById(Long id) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + id));
         return toResponse(task);
     }
 
     public TaskResponse updateTask(Long id, TaskRequest request) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + id));
 
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
@@ -52,7 +53,7 @@ public class TaskService {
 
     public void deleteTask(Long id) {
         if (!taskRepository.existsById(id)) {
-            throw new RuntimeException("Task not found with id: " + id);
+            throw new TaskNotFoundException("Task not found with id: " + id);
         }
         taskRepository.deleteById(id);
     }
