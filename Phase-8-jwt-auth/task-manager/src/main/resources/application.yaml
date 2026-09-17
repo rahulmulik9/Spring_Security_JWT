@@ -16,3 +16,6 @@ spring:
   sql:
     init:
       mode: always
+
+jwt:
+  secret: "ThisIsALearningProjectSecretKeyMakeItLongEnoughForHS256Algorithm"
