@@ -1,4 +1,4 @@
-# Spring Security — Step by Step Learning Plan
+# Spring Security — Step by Step Learning Plan 
 ### Project: Task Management App
 ### Stack: Spring Boot, Maven, PostgreSQL (Docker)
 
